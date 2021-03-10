@@ -1,4 +1,4 @@
-from lab_1.app import App
+from lab_2.app import App
 
 
 def main():

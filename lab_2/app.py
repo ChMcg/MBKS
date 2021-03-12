@@ -62,7 +62,10 @@ class SettingsTab(QtWidgets.QWidget):
         self._table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
         # self._table.horizontalHeader().setSectionResizeMode()
         self._layout.addWidget(self._table)
+        self.add_user_menu()
+        self.add_char_menu()
 
+    def add_user_menu(self):
         self._add_user_widget = QtWidgets.QWidget(self)
         self._add_user_layout = QtWidgets.QHBoxLayout(self._add_user_widget)
         self._add_user_widget.setLayout(self._add_user_layout)
@@ -76,6 +79,7 @@ class SettingsTab(QtWidgets.QWidget):
         self._add_user_layout.addWidget(self._pbRemoveUser)
         self._layout.addWidget(self._add_user_widget)
 
+    def add_char_menu(self):
         self._add_chars_widget = QtWidgets.QWidget(self)
         self._add_chars_layout = QtWidgets.QHBoxLayout(self._add_chars_widget)
         self._add_chars_widget.setLayout(self._add_chars_layout)
@@ -106,9 +110,6 @@ class SettingsTab(QtWidgets.QWidget):
             self._table.setHorizontalHeaderItem(k, item)
         for i, user in enumerate(self._validator.get_users()):
             for k, char in enumerate(self._alphabet):
-                # access_item = QtWidgets.QTableWidgetItem("")
-                # access_item.setFlags(QtCore.Qt.ItemIsUserCheckable | QtCore.Qt.ItemIsEnabled)
-                # self._table.setItem(i, k, access_item)
                 widget = QtWidgets.QWidget(self)
                 layout = QtWidgets.QVBoxLayout()
                 widget.setLayout(layout)
@@ -119,9 +120,7 @@ class SettingsTab(QtWidgets.QWidget):
                 layout.setContentsMargins(0,0,0,0)
                 layout.setAlignment(QtCore.Qt.AlignCenter)
                 self._table.setCellWidget(i, k, widget)
-                # self._cb_table[(i, k)] = cb
                 self._cb_table[id(cb)] = (user, char)
-                # print(id(cb))
                 cb.stateChanged.connect(lambda state: self.handle_item_checked(state))
 
     
@@ -160,12 +159,10 @@ class SettingsTab(QtWidgets.QWidget):
         
 
 class InputTab(QtWidgets.QWidget):
-    users_changed = QtCore.pyqtSignal(list)
 
     def __init__(self, parent):
         super().__init__()
         self.setup_ui()
-        # self.set_validator()
 
     def setup_ui(self):
         self._cbUser = QtWidgets.QComboBox(self)

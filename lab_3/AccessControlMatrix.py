@@ -1,5 +1,6 @@
 from PyQt5 import QtCore
 from functools import reduce
+import json
 
 class AccessControlMatrix(QtCore.QObject):
     maitrix_updated = QtCore.pyqtSignal()
@@ -74,3 +75,19 @@ class AccessControlMatrix(QtCore.QObject):
 
     def remove(self, user: str, symbol: str):
         return self.remove_chars_for_user(user, symbol)
+
+    def save_state(self, path: str):
+        with open(path, 'w') as f:
+            state = dict()
+            for user in self.get_users():
+                state[user] = ''.join(self.matrix[user])
+            f.write(json.dumps(state, indent=2))
+            f.close()
+    
+    def load_state(self, path: str):
+        with open(path, 'r') as f:
+            self.matrix = dict()
+            state: dict = json.loads(f.read())
+            for user in state.keys():
+                self.matrix[user] = set(state[user])
+            self.maitrix_updated.emit()

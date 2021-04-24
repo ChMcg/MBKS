@@ -35,9 +35,11 @@ class AccessControlMatrix(QtCore.QObject):
 
     def add_symbol_for_user(self, user: str, sybmol: str):
         self.matrix[user].add(sybmol)
+        self.maitrix_updated.emit()
         
     def remove_symbol(self, user: str, sybmol: str):
         self.matrix[user].remove(sybmol)
+        self.maitrix_updated.emit()
 
     def add_user(self, user: str, symbol: str):
         if not user in self.matrix.keys():

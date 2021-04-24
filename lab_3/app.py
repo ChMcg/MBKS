@@ -20,6 +20,7 @@ class MainWindow(QtWidgets.QMainWindow):
         except Exception as e:
             print('no state found')
         self.matrix.maitrix_updated.connect(self.save_state)
+        self.matrix.user_added.emit()
 
     def setup_ui(self):
         self._tab_wigdet = QtWidgets.QTabWidget(self)

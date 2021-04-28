@@ -8,8 +8,12 @@
             "name": "Python: Текущий файл",
             "type": "python",
             "request": "launch",
+            "cwd": "${workspaceFolder}",
             "program": "${workspaceFolder}/main.py",
-            "console": "internalConsole"
+            // "program": "${workspaceFolder}/lab_4/app.py",
+            "console": "internalConsole",
+            // "console": "integratedTerminal"
+            "postDebugTask": "umount mount"
         }
     ]
 }

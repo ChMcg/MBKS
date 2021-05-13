@@ -3,6 +3,7 @@ import sys
 from PyQt5 import Qt, QtCore, QtWidgets
 
 from lab_4.SecureFS import SecureFS
+from lab_4.Memory import Memory
 from lab_4.other import logging
 
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
@@ -20,6 +21,7 @@ class FsLauncher(QtCore.QThread):
         self.fg = fg
         self.allow_other = allow_other
         self.fs = SecureFS()
+        # self.fs = Memory()
 
     def run(self) -> None:
         FUSE(

@@ -30,17 +30,38 @@ class Level(int, Enum):
             Level.TopSecret: "TopSecret"
         }
         return tmp[self]
+    
+    def from_str(name: str) -> Level:
+        tmp = {
+            "NonSecret" : Level.NonSecret,
+            "Secret"    : Level.Secret,
+            "TopSecret" : Level.TopSecret,
+        }
+        return tmp[name]
+    
+    @staticmethod
+    def all_levels() -> list[str]:
+        levels = [Level.NonSecret, Level.Secret, Level.TopSecret]
+        return [level.to_str() for level in levels]
+
 
 
 class User(BaseModel):
     st_uid: int = 1000
     st_gid: int = 1000
+    login: str
     access_level: Level = Level.NonSecret
 
+    def __init__(self, login: str, uid: int = 1000, gid: int = 1000, **data) -> None:
+        super().__init__(login=login, st_uid=uid, st_gid=gid, **data)
+        # self.login = login
+        # self.st_uid = uid
+        # self.st_gid = gid
 
 class FsEntity(BaseModel):
     st: Stat = Stat()
     name: str
+    #TODO: Topsecret default
     level: Level = Level.NonSecret
 
     def is_dir(self) -> bool:
@@ -57,6 +78,8 @@ class File(FsEntity):
         self.st.st_size = len(data)
         self.st.st_mode |= stat.S_IFREG
         self.st.st_nlink = 1
+        if isinstance(data, str):
+            data = data.encoode()
         self.data = data
 
 
@@ -72,13 +95,14 @@ class Dir(FsEntity):
         self.st.st_size = 4096
     
     def add_child(self, file: FsEntity):
+        # file.level = self.level
         self.child[file.name] = file
         self.st.st_mtime = int(time())
         self.st.st_nlink += 1
     
     def remove_child(self, file: FsEntity):
-        if file in self.child.keys():
-            del self.child[file]
+        if file.name in self.child.keys():
+            del self.child[file.name]
         else:
             raise FileNotFoundError(f"no child with name: '{file.name}'")
     

@@ -54,9 +54,6 @@ class User(BaseModel):
 
     def __init__(self, login: str, uid: int = 1000, gid: int = 1000, **data) -> None:
         super().__init__(login=login, st_uid=uid, st_gid=gid, **data)
-        # self.login = login
-        # self.st_uid = uid
-        # self.st_gid = gid
 
 class FsEntity(BaseModel):
     st: Stat = Stat()
@@ -95,7 +92,6 @@ class Dir(FsEntity):
         self.st.st_size = 4096
     
     def add_child(self, file: FsEntity):
-        # file.level = self.level
         self.child[file.name] = file
         self.st.st_mtime = int(time())
         self.st.st_nlink += 1

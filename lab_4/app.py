@@ -1,17 +1,12 @@
-#!/home/inelos/projects/MBKS/venv/bin/python
 
 from logging import log
 from lab_4.SecureFS import SecureFS
 from PyQt5 import QtGui
 from PyQt5.QtGui import QColor
-from fuse import FUSE
 import sys
 import time
 from PyQt5 import Qt, QtCore, QtWidgets
-import typing
 
-# from lab_4.Memory import Memory
-# from lab_4.SecureFS import SecureFS
 from lab_4.FsLauncher import FsLauncher
 from lab_4.Fs import User, Level
 from lab_4.other import logging
@@ -39,7 +34,6 @@ class Users(QtWidgets.QWidget):
         self.setLayout(self._layout)
         self._main_widget.setLayout(self._layout)
         for uid, user in self._fs.users.items():
-            # user: User = user
             print('adding user:', (uid, user))
             new_item = QtWidgets.QWidget(self)
             layout = QtWidgets.QHBoxLayout(new_item)
@@ -79,11 +73,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self._tag_padding = max([len(x) for x in possible_tags])
         self._log = QtWidgets.QListWidget(self)
         self._log.setSelectionMode(QtWidgets.QListWidget.NoSelection)
-        self._log.setWordWrap(True)
+        # self._log.setWordWrap(True)
         self.show_log("Приложение запущено")
         self._tw = QtWidgets.QTabWidget(self)
         self.setCentralWidget(self._tw)
-        # self.setCentralWidget(self._log)
         self._users_tab = Users(self.fs, self)
         self._tw.addTab(self._users_tab, "Users")
         self._tw.addTab(self._log, "Log")
@@ -116,6 +109,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
 
 class App(Qt.QApplication):
+    """Перед запуском нужно убедиться, что директория монтирования сужествует и не содержит файлов"""
     def __init__(self, argv=[]) -> None:
         super().__init__(argv)
         self.setStyle('Fusion')

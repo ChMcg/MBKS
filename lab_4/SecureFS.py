@@ -10,9 +10,6 @@ from lab_4.FdGenerator import FdGenerator
 from lab_4.Fs import Level, Stat, User, FsEntity, File, Dir
 
 
-
-
-# class SecureFS(LoggingMixIn, Operations, QtCore.QObject):
 class SecureFS(Operations, QtCore.QObject):
     s_log = QtCore.pyqtSignal(str)
     s_warning = QtCore.pyqtSignal(str)
@@ -29,13 +26,11 @@ class SecureFS(Operations, QtCore.QObject):
 
     def __init__(self):
         super(QtCore.QObject, self).__init__()
-        # self.mkdir('/secure', stat.S_IFDIR | 0o644)
         self.users: dict[int, User] = {}
     
     def scan_users(self):
         with open("/etc/passwd", 'r') as f:
             for line in f.readlines():
-                # print(line.strip().split(':'))
                 name, x, uid, gid, _, _, _ = line.strip().split(':')
                 uid = int(uid)
                 gid = int(gid)
@@ -47,11 +42,12 @@ class SecureFS(Operations, QtCore.QObject):
         self.users_updated.emit()
     
     def set_user_level(self, uid: int, level: Level):
+        user = self.users[uid]
+        self.s_log.emit(f"Changing user access level: [{user.login}]: {user.access_level.to_str()} -> {level.to_str()}")
         self.users[uid].access_level = level
         print('user level:', (uid, level))
     
     def create_default_dirs(self):
-        # user = self.get_current_user()
         user = self.users[1000]
         self.root: FsEntity = Dir(name="/", user=user)
         for level in [Level.NonSecret, Level.Secret, Level.TopSecret]:
@@ -59,7 +55,6 @@ class SecureFS(Operations, QtCore.QObject):
 
     def get_current_user(self) -> User:
         uid, gid, pid = fuse_get_context()
-        # print(uid, gid, pid, list(self.users.keys()))
         if uid not in self.users:
             self.s_warning.emit(f"Unknown user: {uid, gid}")
             raise KeyError("User not found")
@@ -74,12 +69,12 @@ class SecureFS(Operations, QtCore.QObject):
         filename = path.split('/')[-1]
         dir = self.get_dir(basename)
         if user.access_level < dir.level:
+            self.s_warning.emit(f"Заблокирована попытка создания файла: {user.login} -> {filename} в директории {basename}")
             return -1;
         if mode & stat.S_IFDIR:
             dir.add_child(Dir(filename, user, level=dir.level))
         else:
             dir.add_child(File(filename, b'', user, level=dir.level))
-        # return FdGenerator.new_file(path)
         return 0
 
     def get_entity(self, path: str) -> FsEntity:
@@ -100,7 +95,6 @@ class SecureFS(Operations, QtCore.QObject):
     def get_file(self, path: str) -> File:
         return self.get_entity(path)
     
-    @wrapped
     def getattr(self, path: str, fh = None) -> Stat:
         try:
             logging.debug(f"getxattr for: {path}")
@@ -109,17 +103,8 @@ class SecureFS(Operations, QtCore.QObject):
             logging.debug(f'not found: {path}')
             raise FuseOSError(errno.ENOENT)
     
-    # def getxattr(self, path, name, position=0):
-    #     # return self.getattr(path)
-    #     return {}
-
     getxattr = None
 
-    # def open(self, path, flags):
-    #     # return super().open(path, flags)
-    #     return FdGenerator.new_fd()
-    
-    @wrapped
     def readdir(self, path, fh):
         logging.debug(f"reading dir on '{path}'")
         user = self.get_current_user()
@@ -136,6 +121,7 @@ class SecureFS(Operations, QtCore.QObject):
         file = self.get_file(path)
         user = self.get_current_user()
         if user.access_level < file.level:
+            self.s_warning.emit(f"Заблокирована попытка чтения: {user.login} -> {file.name}")
             raise FuseOSError(errno.EACCES)
         else:
             return self.get_file(path).data[offset:offset+size]
@@ -146,10 +132,10 @@ class SecureFS(Operations, QtCore.QObject):
             user = self.get_current_user()
             file: File = self.get_file(path)
             if user.access_level > file.level:
+                self.s_warning.emit(f"Заблокирована попытка записи: {user.login} -> {file.name}")
                 raise FuseOSError(errno.EACCES)
             if isinstance(data, str):
                 data = data.encode()
-            # file.data = file.data[:offset].encode() + data + file.data[offset+len(data):].encode()
             print('concatenating:', (file.data[:offset], data, file.data[offset+len(data):]))
             if len(file.data) == 0:
                 file.data = data
@@ -172,7 +158,6 @@ class SecureFS(Operations, QtCore.QObject):
         basename = "/".join(path.split('/')[:-1])
         filename = path.split('/')[-1]
         self.get_dir(basename).add_child(Dir(filename, User('admin')))
-        # return FdGenerator.new_file(path)
         return 0
         
     @wrapped
@@ -181,7 +166,6 @@ class SecureFS(Operations, QtCore.QObject):
     
     @wrapped
     def rmdir(self, path: str):
-        # self.get_dir(path)
         self.s_log.emit(f"rmdir: {path}")
         logging.debug(path)
         basename = "/".join(path.split('/')[:-1])
@@ -210,7 +194,6 @@ class SecureFS(Operations, QtCore.QObject):
                 dir.remove_child(child)
                 break
     
-    @wrapped
     def releasedir(self, path, fh):
         logging.debug(path)
         

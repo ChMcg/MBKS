@@ -17,6 +17,7 @@ class SettingsTab(QtWidgets.QWidget):
         self._table = QtWidgets.QTableWidget(self)
         self._table.setSelectionMode(QtWidgets.QTableWidget.NoSelection)
         self._table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
+        self._table.itemChanged.connect(self.handle_item_checked_new)
         self._layout.addWidget(self._table)
         self.add_create_section(self._layout)
         self.add_remove_section(self._layout)
@@ -107,28 +108,28 @@ class SettingsTab(QtWidgets.QWidget):
         self._w_gb_grant.setEnabled(available)
 
     def update_table(self):
+        self._table.blockSignals(True)
+        self._table.clear()
+        self._cb_table.clear()
         self._table.setRowCount(self._matrix.count_users())
         self._table.setColumnCount(len(self._alphabet))
         for i, user in enumerate(self._matrix.get_users()):
-            item = QtWidgets.QTableWidgetItem(user)
-            self._table.setVerticalHeaderItem(i, item)
-        for k, char in enumerate(self._alphabet):
-            item = QtWidgets.QTableWidgetItem(char)
-            self._table.setHorizontalHeaderItem(k, item)
-        for i, user in enumerate(self._matrix.get_users()):
+            v_header_item = QtWidgets.QTableWidgetItem(user)
+            self._table.setVerticalHeaderItem(i, v_header_item)
             for k, char in enumerate(self._alphabet):
-                widget = QtWidgets.QWidget(self)
-                layout = QtWidgets.QVBoxLayout()
-                widget.setLayout(layout)
-                cb = QtWidgets.QCheckBox()
+                if i == 0:
+                    h_header_item = QtWidgets.QTableWidgetItem(char)
+                    self._table.setHorizontalHeaderItem(k, h_header_item)
+
+                cell_item = QtWidgets.QTableWidgetItem('')
+                cell_item.setFlags(QtConstants.ItemIsUserCheckable | QtConstants.ItemIsEnabled)
                 if char in self._matrix.get_available_chars_for_user(user):
-                    cb.setChecked(True)
-                layout.addWidget(cb)
-                layout.setContentsMargins(0,0,0,0)
-                layout.setAlignment(QtCore.Qt.AlignCenter)
-                self._table.setCellWidget(i, k, widget)
-                self._cb_table[id(cb)] = (user, char)
-                cb.stateChanged.connect(lambda state: self.handle_item_checked(state))
+                    cell_item.setCheckState(QtConstants.Checked)
+                else:
+                    cell_item.setCheckState(QtConstants.Unchecked)
+                cell_item.setData(QtConstants.UserRole, (user, char))
+                self._table.setItem(i,k, cell_item)
+        self._table.blockSignals(False)
 
     def handle_item_checked(self, state: int):
         user, char = self._cb_table[id(self.sender())]
@@ -136,6 +137,17 @@ class SettingsTab(QtWidgets.QWidget):
             self._matrix.add_symbol_for_user(user, char)
         elif state == QtCore.Qt.Unchecked:
             self._matrix.remove_symbol(user, char)
+
+    def handle_item_checked_new(self, item: QtWidgets.QTableWidgetItem):
+        self._matrix.blockSignals(True)
+        user, char = item.data(QtConstants.UserRole)
+        checked = item.checkState() == QtConstants.Checked
+        print((user, char), '->', checked)
+        if checked:
+            self._matrix.add_symbol_for_user(user, char)
+        else:
+            self._matrix.remove_symbol(user, char)
+        self._matrix.blockSignals(False)
 
     def handle_create(self):
         user = self._cbb_create_user.currentText()

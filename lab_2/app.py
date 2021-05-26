@@ -2,7 +2,8 @@ from functools import reduce
 from PyQt5 import Qt, QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt as QtConstants
 import string
-
+import json
+from lab_3.AccessControlMatrix import AccessControlMatrix as ACM
 
 class Validator(QtCore.QObject):
     maitrix_updated = QtCore.pyqtSignal()
@@ -14,6 +15,8 @@ class Validator(QtCore.QObject):
         self.matrix = matrix
     
     def validate(self, user: str, raw_str: str) -> str:
+        if user not in self.matrix.keys():
+            return ''
         ret = "".join([x for x in raw_str if x in self.matrix[user] ])
         print(f"{user}: '{raw_str}' -> '{ret}'")
         return ret
@@ -21,8 +24,14 @@ class Validator(QtCore.QObject):
     def users(self) -> int:
         return len(self.get_users())
 
+    def count_users(self) -> int:
+        return len(self.get_users())
+
     def get_all_chars(self) -> list[str]:
-        return list(reduce(lambda x,y: {*x, *y}, self.matrix.values()))
+        if len(self.matrix) > 0:
+            return sorted(list(reduce(lambda x,y: {*x, *y}, self.matrix.values())))
+        else:
+            return ""
 
     def get_users(self) -> list[str]:
         return self.matrix.keys()
@@ -33,8 +42,13 @@ class Validator(QtCore.QObject):
     def add_symbol(self, user: str, sybmol: str):
         self.matrix[user].add(sybmol)
         
+    def add_symbol_for_user(self, user: str, sybmol: str):
+        self.matrix[user].add(sybmol)
+        self.maitrix_updated.emit()
+
     def remove_symbol(self, user: str, sybmol: str):
         self.matrix[user].remove(sybmol)
+        self.maitrix_updated.emit()
 
     def add_user(self, user: str):
         if not user in self.matrix.keys():
@@ -44,6 +58,22 @@ class Validator(QtCore.QObject):
     def remove_user(self, user: str):
         if user in self.matrix.keys():
             del self.matrix[user]
+            self.maitrix_updated.emit()
+
+    def save_state(self, path: str):
+        with open(path, 'w') as f:
+            state = dict()
+            for user in self.get_users():
+                state[user] = ''.join(self.matrix[user])
+            f.write(json.dumps(state, indent=2))
+            f.close()
+    
+    def load_state(self, path: str):
+        with open(path, 'r') as f:
+            self.matrix = dict()
+            state: dict = json.loads(f.read())
+            for user in state.keys():
+                self.matrix[user] = set(state[user])
             self.maitrix_updated.emit()
 
 
@@ -61,6 +91,7 @@ class SettingsTab(QtWidgets.QWidget):
         self._table = QtWidgets.QTableWidget(self)
         self._table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
         # self._table.horizontalHeader().setSectionResizeMode()
+        self._table.itemChanged.connect(self.handle_item_checked_new)
         self._layout.addWidget(self._table)
         self.add_user_menu()
         self.add_char_menu()
@@ -100,29 +131,60 @@ class SettingsTab(QtWidgets.QWidget):
         self.update_table()
     
     def update_table(self):
-        self._table.setRowCount(self._validator.users())
+        # self._table.setRowCount(self._validator.users())
+        # self._table.setColumnCount(len(self._alphabet))
+        # for i, user in enumerate(self._validator.get_users()):
+        #     item = QtWidgets.QTableWidgetItem(user)
+        #     self._table.setVerticalHeaderItem(i, item)
+        # for k, char in enumerate(self._alphabet):
+        #     item = QtWidgets.QTableWidgetItem(char)
+        #     self._table.setHorizontalHeaderItem(k, item)
+        # for i, user in enumerate(self._validator.get_users()):
+        #     for k, char in enumerate(self._alphabet):
+        #         widget = QtWidgets.QWidget(self)
+        #         layout = QtWidgets.QVBoxLayout()
+        #         widget.setLayout(layout)
+        #         cb = QtWidgets.QCheckBox()
+        #         if char in self._validator.get_available_chars_for_user(user):
+        #             cb.setChecked(True)
+        #         layout.addWidget(cb)
+        #         layout.setContentsMargins(0,0,0,0)
+        #         layout.setAlignment(QtCore.Qt.AlignCenter)
+        #         self._table.setCellWidget(i, k, widget)
+        #         self._cb_table[id(cb)] = (user, char)
+        #         cb.stateChanged.connect(lambda state: self.handle_item_checked(state))
+        self._table.blockSignals(True)
+        self._table.clear()
+        self._cb_table.clear()
+        self._table.setRowCount(self._validator.count_users())
         self._table.setColumnCount(len(self._alphabet))
         for i, user in enumerate(self._validator.get_users()):
-            item = QtWidgets.QTableWidgetItem(user)
-            self._table.setVerticalHeaderItem(i, item)
-        for k, char in enumerate(self._alphabet):
-            item = QtWidgets.QTableWidgetItem(char)
-            self._table.setHorizontalHeaderItem(k, item)
-        for i, user in enumerate(self._validator.get_users()):
+            v_header_item = QtWidgets.QTableWidgetItem(user)
+            self._table.setVerticalHeaderItem(i, v_header_item)
             for k, char in enumerate(self._alphabet):
-                widget = QtWidgets.QWidget(self)
-                layout = QtWidgets.QVBoxLayout()
-                widget.setLayout(layout)
-                cb = QtWidgets.QCheckBox()
+                if i == 0:
+                    h_header_item = QtWidgets.QTableWidgetItem(char)
+                    self._table.setHorizontalHeaderItem(k, h_header_item)
+                cell_item = QtWidgets.QTableWidgetItem('')
+                cell_item.setFlags(QtConstants.ItemIsUserCheckable | QtConstants.ItemIsEnabled)
                 if char in self._validator.get_available_chars_for_user(user):
-                    cb.setChecked(True)
-                layout.addWidget(cb)
-                layout.setContentsMargins(0,0,0,0)
-                layout.setAlignment(QtCore.Qt.AlignCenter)
-                self._table.setCellWidget(i, k, widget)
-                self._cb_table[id(cb)] = (user, char)
-                cb.stateChanged.connect(lambda state: self.handle_item_checked(state))
+                    cell_item.setCheckState(QtConstants.Checked)
+                else:
+                    cell_item.setCheckState(QtConstants.Unchecked)
+                cell_item.setData(QtConstants.UserRole, (user, char))
+                self._table.setItem(i,k, cell_item)
+        self._table.blockSignals(False)
 
+    def handle_item_checked_new(self, item: QtWidgets.QTableWidgetItem):
+        # self._validator.blockSignals(True)
+        user, char = item.data(QtConstants.UserRole)
+        checked = item.checkState() == QtConstants.Checked
+        print((user, char), '->', checked)
+        if checked:
+            self._validator.add_symbol_for_user(user, char)
+        else:
+            self._validator.remove_symbol(user, char)
+        # self._validator.blockSignals(False)
     
     def handle_item_checked(self, state: int):
         user, char = self._cb_table[id(self.sender())]
@@ -155,7 +217,10 @@ class SettingsTab(QtWidgets.QWidget):
         self.update_table()
 
     def handle_matrix_updated(self):
-        self.set_validator(self._validator)
+        # self.set_validator(self._validator)
+        self._alphabet = self._validator.get_all_chars()
+        self.update_table()
+    
         
 
 class InputTab(QtWidgets.QWidget):
@@ -208,6 +273,12 @@ class MainWindow(QtWidgets.QMainWindow):
         self.validator = Validator({'default': {'a','b','c'}, 'other': {'d','e','f'}})
         self._input_tab.set_validator(self.validator)
         self._settings_tab.set_validator(self.validator)
+        try:
+            with open('matrix.json'):
+                self.validator.load_state('matrix.json')
+        except Exception as e:
+            print('no state found')
+        self.validator.maitrix_updated.connect(self.save_state)
 
     def setup_ui(self):
         self._tab_wigdet = QtWidgets.QTabWidget(self)
@@ -220,6 +291,10 @@ class MainWindow(QtWidgets.QMainWindow):
     def keyPressEvent(self, e: Qt.QKeyEvent):
         if e.key() == Qt.Qt.Key_Escape:
             self.close()
+
+    def save_state(self):
+        print('saving')
+        self.validator.save_state("matrix.json")
 
 
 class App(Qt.QApplication):

@@ -13,7 +13,7 @@
             // "program": "${workspaceFolder}/lab_4/app.py",
             "console": "internalConsole",
             // "console": "integratedTerminal"
-            // "postDebugTask": "umount mount"
+            "postDebugTask": "umount mount"
         }
     ]
 }

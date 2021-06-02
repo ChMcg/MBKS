@@ -29,6 +29,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self._tab_wigdet.addTab(self._settings_tab, "Настройки")
         self._tab_wigdet.addTab(self._input_tab,    "Ввод")
         self.setCentralWidget(self._tab_wigdet)
+        self.setMinimumSize(QtCore.QSize(800, 600))
 
     def keyPressEvent(self, e: Qt.QKeyEvent):
         if e.key() == Qt.Qt.Key_Escape:

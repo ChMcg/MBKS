@@ -7,9 +7,9 @@
         "**/.DS_Store": true,
         "venv": true,
         "__pycache__": false,
-        "**/__pycache__": true
+        "**/__pycache__": true,
+        "**/.venv": true
     },
     "explorerExclude.backup": null,
-    "python.pythonPath": ".venv/bin/python",
     "git.ignoreLimitWarning": true
 }
